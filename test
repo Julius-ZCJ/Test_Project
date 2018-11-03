@@ -1,0 +1,199 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Oct 22 16:10:52 2018
+
+@author: Administrator
+"""
+import math
+class Featureselect():
+    def __init__(self,inputx,inputy):
+        self.inputx=inputx #训练数据集
+        self.inputy=inputy
+        
+        self.feature=[]     # x的特征
+        self.feaNum_dict={}  #存储的是x的特征以及对应的训练集的下标
+        self.feaX_dict={}
+        
+        self.D_entro=0 #存的是训练集的信息熵
+        self.Dik_list=[] #存储的是H(D|A)
+        self.entropyDice={}
+        self.y_class_dict={} #存储y的可能取值，即Ck
+        self.g=[]#存储的是各个特征的信息增益
+        self.gr=[]#存储的是信息增益比
+        ##################3以下是对函数的调用
+        self.select_y()
+        self.select_x()
+        self.D_entropy()
+        self.Dik_entropy()
+        
+      #  self.count_entropy()
+        
+    def select_y(self):# 生成y的可能取值的集合，Ck
+        y_class=[]
+        for y in self.inputy:
+            if y not in y_class:
+                y_class.append(y)
+            else:
+                pass
+        flag=0
+        y_num=[]
+        for yi in y_class:
+            for y in self.inputy:
+                if yi==y:
+                    flag+=1
+                else:
+                    pass
+            y_num.append(flag)
+            flag=0
+            
+        self.y_class_dict=dict(zip(y_class,y_num))  #y的类，和每个类的训练集个数
+        
+#        print('self.y_class_dict',self.y_class_dict)
+    def select_x(self):
+        feature=[]
+        feature1=[]
+        for i in range(len(self.inputx[0])): 
+            for x in self.inputx:
+                if x[i] not in feature:
+                    feature.append(x[i])
+                else:
+                    pass
+            feature1.append(feature)  #双重list
+            feature=[]
+     #   print('feature1',feature1)
+        flag=0
+        xi_num=[]
+        Xi_x=[]
+        num=[]
+        x_x=[]
+        flag
+        for index,xi_feature_list in enumerate(feature1):  #取出xi的所有特征的集合
+            for feature in xi_feature_list: #重特征集合中取出一个特征
+                index_list=[]
+                x_list=[]
+                for index1,x in enumerate(self.inputx):
+                    if x[index]==feature:
+                        index_list.append(index1) #将属于这个特征的x的下标保存下来
+                        x_list.append(x)
+                        flag+=1
+                    else:
+                        pass
+                xi_num.append(index_list)
+                Xi_x.append(x_list)
+#                flag=0
+            num.append(xi_num)
+            x_x.append(Xi_x)
+            xi_num=[]
+            Xi_x=[]
+      #  print('num',num)
+        dict_list=[]
+        xx_list=[]
+   #     print('x',x_x)
+        for index,feature in enumerate(feature1):
+            f_num_dict = dict(zip(feature,num[index]))
+            f_x_dict=dict(zip(feature,x_x[index]))
+         #   print('f_num_dict',f_num_dict)
+            dict_list.append(f_num_dict)
+            xx_list.append(f_x_dict)
+        for i in range(len(self.inputx[0])):
+            self.feaNum_dict[i]=dict_list[i]
+            self.feaX_dict[i]=xx_list[i]
+#        print('self.feaNum_dict',self.feaNum_dict)
+#        print('self.feaX_dict',self.feaX_dict)
+        
+    #        for index,x_feature in enumerate(x):
+                
+    def D_entropy(self):#计算训练集经验熵
+        y_pro=[]
+        for Ck in self.y_class_dict.keys():
+            y_pro.append(self.y_class_dict[Ck]/len(self.inputy))
+        y_entropy=0
+        for pro in y_pro:
+           # print('pro',pro)
+            y_entropy=y_entropy - pro * math.log(pro,2)
+        self.D_entro=y_entropy
+#        print('self.D_entro',self.D_entro)
+# =====#========================================================================
+#     def count_entropy(self):#计算信息熵即H(D|A)
+#         entropyDice={}
+#         for Xi in self.feaNum_dict.keys(): #指第i个特征
+#             num_sum=0
+#             for value in self.feaNum_dict[Xi].values(): #指第i个特征可能的取值
+#                 num_sum=num_sum-value*math.log(value,2) #以2为低
+#             entropyDice[Xi]=num_sum
+#         self.entropyDice=entropyDice
+#         print('entropyDice',entropyDice)
+# =============================================================================
+    def Dik_entropy(self):#计算经验条件熵
+        Dik_entro=[]
+        num_long=len(self.inputx) #输入的个数
+        for Xi in self.feaNum_dict.keys():#Xi是输入的第几个x
+            Dik=[]
+            
+            for Di in self.feaNum_dict[Xi].keys():
+           #     print('self.feaNum_dict[Xi][Di]',self.feaNum_dict[Xi][Di])
+                long=len(self.feaNum_dict[Xi][Di])
+                pro=long/num_long # Di/D 的概率
+           #     print('pro',pro,long,num_long) 
+                Dik_ent=0
+                
+                for y in self.y_class_dict.keys(): #y的类别
+                    flag=0
+                    for index in self.feaNum_dict[Xi][Di]:
+                        
+                        if self.inputy[index]==y:
+                            flag+=1
+                        else:
+                            pass
+                    Di_pro=flag/long
+                #    print('Di_pro',Di_pro,flag,long)
+                    try:#有可能Di_pro为0
+                        Dik_ent=Dik_ent-Di_pro*math.log(Di_pro,2)
+                    except:
+                        pass
+             #   print('Dik_ent',Dik_ent,Dik_ent*pro)
+                Dik.append(Dik_ent*pro)
+            Dik_entro.append(Dik)
+        
+      #  print(Dik_entro)
+        for D_list in Dik_entro:
+            num_sum=0
+            for num in D_list:
+                num_sum=num_sum+num
+            self.Dik_list.append(num_sum)
+#        print('self.Dik_list',self.Dik_list)
+    def G_infor(self):#计算信息增益
+        for Hi in self.Dik_list:
+            self.g.append(self.D_entro-Hi)
+#        print('self.g',self.g)
+        return self.g
+    def GR_infor(self):#计算信息增益比
+        num_long=len(self.inputx)
+        for X in self.feaNum_dict.keys():
+            num_sum=0
+            for value in self.feaNum_dict[X].values():
+                long=len(value)#就是X特征这个取值的个数了
+                num_sum=num_sum-(long/num_long)*math.log(long/num_long,2)
+            self.gr.append(num_sum)
+#        print('self.gr',self.gr)
+        return self.gr
+            
+            
+if __name__=='__main__':
+    x1={1:'青年',2:'中年',3:'老年'} #年龄
+    x2={1:'否',2:'是'}#有工作
+    x3={1:'否',2:'是'}#有自己的房子
+    x4={1:'一般',2:'好',3:'非常好'}#信贷情况
+    inputx=[[1, 1, 1, 1], [1, 1, 1, 1], [2, 1, 1, 1], [3, 1, 1, 1]]
+    inputy=[1, 1, 1, 1]
+#    inputx=[[1,1,1,1],[1,1,1,2],[1,2,1,2],[1,2,2,1],[1,1,1,1],
+#            [2,1,1,1],[2,1,1,2],[2,2,2,2],[2,1,2,3],[2,1,2,3],
+#            [3,1,2,3],[3,1,2,2],[3,2,1,2],[3,2,1,3],[3,1,1,1]]
+    
+    y={1:'是',2:'否'}
+    inputy=[1,1,2,2,1,1,1,2,2,2,2,2,2,2,1]
+    a=Featureselect(inputx,inputy)
+    a.G_infor()
+    a.GR_infor()
+  #  a.Dik_entropy()
+  #  a.count_entropy()
